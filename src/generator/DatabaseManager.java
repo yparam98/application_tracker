@@ -30,48 +30,70 @@ public class DatabaseManager
         }
     }
 
-    public Application[] get_applications() throws SQLException
-    {
-        ArrayList<Application> applications = new ArrayList<>();
-
-        Statement application_cursor = this.mariadb_connection.createStatement();
-        ResultSet resultSet = application_cursor.executeQuery("select * from application");
-
-
-        // convert ArrayList<Application> to a fixed array of Application, return that instead. Easier on memory.
-        Application[] applications_array = new Application[applications.size()];
-        applications_array = applications.toArray(applications_array);
-        return applications_array;
-    }
-
     private void initialize_db() throws SQLException
     {
-        Statement initial_query = this.mariadb_connection.createStatement();
-        if (!initial_query.executeQuery("show tables").next()) // if db has no tables
+        try
         {
-            // create tables
-            initial_query.executeQuery(get_query_from_file("create_tables.sql"));
-        }
-        else
-        { // populate the arrays
-            populateEverything();
+            Statement initial_query = this.mariadb_connection.createStatement();
+            if (!initial_query.executeQuery("show tables").next()) // if db has no tables
+            {
+                // create tables
+                initial_query.executeQuery(get_query_from_file("create_tables.sql"));
+            } else
+            {
+                // populate the arrays
+                Statement querier = this.mariadb_connection.createStatement();
+
+                populateAddress(querier.executeQuery("select * from address"));
+                populateContact(querier.executeQuery("select * from contact"));
+                populateCandidate(querier.executeQuery("select * from candidate"));
+                populateCompany(querier.executeQuery("select * from company"));
+                populateApplication(querier.executeQuery("select * from application"));
+            }
+        } catch (SQLException sqlException)
+        {
+            System.out.println(sqlException.getLocalizedMessage());
         }
     }
 
-    private void populateEverything() throws SQLException
+    private void populateAddress(ResultSet resultSet) throws SQLException
     {
-        Statement querier = this.mariadb_connection.createStatement();
-        ResultSet application_results = querier.executeQuery("select * from application");
-        ResultSet candidate_results = querier.executeQuery("select * from candidate");
-        ResultSet company_results = querier.executeQuery("select * from company");
-        ResultSet contact_results = querier.executeQuery("select * from contact");
-        ResultSet address_results = querier.executeQuery("select * from address");
-
-        // order of priority: address -> contact -> candidate -> company -> application
-
         String holder = "";
+        int index = 0;
 
-        while ((holder = address_results.))
+        while (resultSet.next())
+        {
+            resultSet.absolute(index++);
+            // adding address objects to ArrayList
+            this.addresses.add(new Address(
+                    resultSet.getInt("id"),
+                    resultSet.getInt("street_num"),
+                    resultSet.getString("street_name"),
+                    resultSet.getString("city"),
+                    resultSet.getString("state"),
+                    resultSet.getString("country")
+            ));
+        }
+    }
+
+    private void populateContact(ResultSet resultSet) throws SQLException
+    {
+
+    }
+
+    private void populateCandidate(ResultSet resultSet) throws SQLException
+    {
+
+    }
+
+    private void populateCompany(ResultSet resultSet) throws SQLException
+    {
+
+    }
+
+    private void populateApplication(ResultSet resultSet) throws SQLException
+    {
+
     }
 
     private String get_query_from_file(String file_name)
@@ -87,8 +109,7 @@ public class DatabaseManager
             {
                 query.append(current_line);
             }
-        }
-        catch (IOException ioException)
+        } catch (IOException ioException)
         {
             System.out.println(ioException.getLocalizedMessage());
         }
@@ -111,8 +132,7 @@ public class DatabaseManager
             try
             {
                 Application.url = new URL(url);
-            }
-            catch (MalformedURLException e)
+            } catch (MalformedURLException e)
             {
                 Application.url = null;
             }
